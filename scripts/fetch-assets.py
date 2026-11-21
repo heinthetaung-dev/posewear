@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""从原作者的公开图库下载构建所需的数据与图片到 ./assets-raw（或 POSEWEAR_RAW）。
+"""Download dataset assets and images required for building from public galleries to ./assets-raw (or POSEWEAR_RAW).
 
-图片与原始数据版权归各自作者所有，本仓库不包含任何素材。
-请只用于本地构建与学习，遵守原站的使用条款；下载时请保持低并发，不要反复全量抓取。
+Images and source data copyright belongs to respective authors; this repository contains no assets.
+Please use strictly for local builds and educational purposes, adhering to the original sites' terms of service.
+Keep concurrency low when downloading; do not perform repetitive full fetches.
 
-用法：
-  python3 scripts/fetch-assets.py              # 全部
-  python3 scripts/fetch-assets.py pose costume # 只下载部分素材库
-  python3 scripts/fetch-assets.py --meta-only  # 只下载数据，不下载图片
+Usage:
+  python3 scripts/fetch-assets.py              # Download all
+  python3 scripts/fetch-assets.py pose costume # Download specific libraries only
+  python3 scripts/fetch-assets.py --meta-only  # Download metadata only, skip images
 """
 import json, os, re, sys, time, urllib.request, concurrent.futures as cf
 
@@ -23,7 +24,7 @@ WORKERS = 4
 
 
 def _curl(url, path):
-    """urllib 经代理时偶发 IncompleteRead 中断，curl 更稳，作为兜底。"""
+    """urllib occasionally encounters IncompleteRead when going through proxies; curl is more stable as a fallback."""
     import subprocess
     if path is None:
         r = subprocess.run(['curl', '-sS', '-f', '-A', UA['User-Agent'], '--max-time', '90', url],
@@ -56,12 +57,12 @@ def get(url, path=None, tries=4):
     r = _curl(url, path)
     if r:
         return r
-    print('失败', url, err, flush=True)
+    print('Failed:', url, err, flush=True)
     return None if path is None else 0
 
 
 def inline_data(html):
-    """原站把数据写在页面里的 const X=...; 中。"""
+    """Original site inlines data in the page as const X=...;"""
     out = {}
     for name in ['META', 'D', 'ANG', 'POSES', 'PMAP', 'JA']:
         m = re.search(r'const ' + name + r'=(.*?);\n', html)
@@ -70,7 +71,7 @@ def inline_data(html):
                 out[name] = json.loads(m.group(1))
             except ValueError:
                 if name == 'D':
-                    print('解析失败', name)
+                    print('Failed to parse:', name)
     return out
 
 
@@ -82,7 +83,7 @@ def meta(lib):
         open(os.path.join(d, 'index.html'), 'w').write(html)
         data = inline_data(html)
         if 'D' not in data:
-            sys.exit(f'{lib}: 页面结构可能已变化，没找到数据')
+            sys.exit(f'{lib}: page structure may have changed, data not found')
         json.dump(data, open(os.path.join(d, 'data.json'), 'w'), ensure_ascii=False)
         keys = {'pose': ['サムネ', '原寸'], 'costume': ['サムネ', '画像', '原寸'], 'anime': ['サムネ', '画像', '原寸']}[lib]
         return [x[k] for x in data['D'] for k in keys if x.get(k)]
@@ -98,7 +99,7 @@ def main():
     only_meta = '--meta-only' in sys.argv
     for lib in args:
         files = meta(lib)
-        print(f'{lib}: {len(files)} 个文件', flush=True)
+        print(f'{lib}: {len(files)} files', flush=True)
         if only_meta:
             continue
         jobs = [(SRC[lib] + f, os.path.join(OUT, lib, f)) for f in files]
@@ -108,7 +109,7 @@ def main():
                 n += s or 0
                 if i % 200 == 0:
                     print(f'  {i}/{len(jobs)}  {n / 1e6:.0f} MB', flush=True)
-    print('完成。接下来运行：python3 build.py')
+    print('Done. Next step: run python3 build.py')
 
 
 if __name__ == '__main__':

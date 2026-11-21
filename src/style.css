@@ -1,4 +1,4 @@
-/* 衣姿 v6 · clean modern */
+/* PoseWear v6 - clean modern */
 :root{--sans:-apple-system,BlinkMacSystemFont,"PingFang SC","HarmonyOS Sans SC","Hiragino Sans GB","Microsoft YaHei","Helvetica Neue",Arial,sans-serif;
  --bg:#fff;--bg2:#fff;--sf:#f5f5f5;--sf2:#ebebeb;--tx:#111;--tx2:#555;--mu:#999;--line:#f0f0f0;--line2:#e3e3e3;--ac:#ff2442;--ac2:#e61e3a;--acs:rgba(255,36,66,.07);--ok:#21a366;--bad:#e5243b;
  --ph:#f3f3f3;--phw:#f4f4f4;--sh1:0 1px 3px rgba(0,0,0,.08);--sh2:0 4px 20px rgba(0,0,0,.08);--sh3:0 20px 60px rgba(0,0,0,.18);--out:cubic-bezier(.2,.7,.2,1);--r:14px;--w:1680px;color-scheme:light}
@@ -397,7 +397,7 @@ body.batch .cbtns,body.batch .try,body.batch #tray{display:none!important}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}#wbGo::after{display:none}}
 body.batch .card .badge,body.batch .card .angs{display:none}
 @media(max-width:760px){#bbar{gap:4px;padding:6px 6px 6px 14px;overflow:visible}#bbar b{margin-right:2px;font-size:12.5px}#bbar button{padding:7px 9px;font-size:12px}#batchBtn{font-size:0;gap:0;padding:0 10px}#batchBtn svg{margin:0}}
-/* ===== v9 去 AI 味 ===== */
+/* ===== v9 Refined aesthetics ===== */
 .mark{background:none;color:var(--ac);width:30px;height:30px;border-radius:0}.mark svg{width:30px;height:30px;display:block}
 .onb{background:#f6f6f6}[data-theme=dark] .onb{background:#1d1d1d}.onb-i{color:#111;font-size:0}
 .ill .c3{background:#fff;color:#999;font-size:13px;box-shadow:none;border:1.5px dashed #d6d6d6}
@@ -420,7 +420,7 @@ body.none0 #favTools,body.none0 #fBtn,body.none0 #sort,body.none0 #batchBtn,body
 .cnote{font-size:12.5px;color:var(--mu);margin:18px 0 0;text-align:center}
 .lnkb{background:none;border:0;padding:0 0 0 6px;color:var(--tx);text-decoration:underline;font-size:inherit;cursor:pointer}
 .copy-r a{color:inherit}
-/* 深色：试穿占位、结果框、钥匙图标 */
+/* Dark mode: try-on placeholder, result box, key icon */
 [data-theme=dark] .ill i{background:#1f1f1f;box-shadow:none;color:#9a9a9a}
 [data-theme=dark] .ill i::before{background:#333}
 [data-theme=dark] .ill .c2::before{background:#4a2a31}

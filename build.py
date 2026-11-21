@@ -1,11 +1,11 @@
-import json,os,shutil,subprocess,depthpack
+import json,os,shutil,depthpack,post
 from costume_text import gen2
 import hashlib,re,html as H
 from concurrent.futures import ProcessPoolExecutor
 from PIL import Image
-# 素材目录：默认 ./assets-raw，可用环境变量 POSEWEAR_RAW 指定（见 scripts/fetch-assets.py）
+# Assets directory: defaults to ./assets-raw, customizable via POSEWEAR_RAW env (see scripts/fetch-assets.py)
 R=os.environ.get('POSEWEAR_RAW','assets-raw'); D='dist'
-# 分离部署：设 POSEWEAR_ASSET_HOST 后，缩略图与原图输出到 dist-assets（独立 Pages 站），主站文件数压回免费版上限内；不设则单站构建，行为不变
+# Split deployment: when POSEWEAR_ASSET_HOST is set, thumbnails and full images output to dist-assets (separate Pages site) to keep main site file count under free tier limits; otherwise single-site build.
 AHOST=os.environ.get('POSEWEAR_ASSET_HOST','').rstrip('/'); AD='dist-assets'; AROOT=AD if AHOST else D
 if AHOST: os.makedirs(AD,exist_ok=True)
 LINE={'全身1人・セクシー系':('全身·性感','full body, solo, sexy'),'全身1人・標準系':('全身·标准','full body, solo'),'上半身1人':('上半身','upper body, solo'),'2人絡み':('双人互动','two people, couple')}
@@ -22,7 +22,7 @@ for d in pd:
   a=ANG[d['アングル']]; p['angles'].append({'zh':a[0],'en':a[1],'t':'p/t/'+d['id']+'.webp','i':'p/i/'+d['id']+'.webp','o':'o/p/'+d['id']+'.png','_src':d})
 cos=[{'id':d['id'],'cat':CC[d['カテゴリ']][0],'catEn':CC[d['カテゴリ']][1],'kw':d['キーワード'],**dict(zip(('zh','en','ti'),gen2(d['キーワード'],CC[d['カテゴリ']][1],d['id']))),'t':'c/t/'+os.path.basename(d['サムネ']),'m':'c/m/'+d['id']+'.webp','i':'c/i/'+os.path.basename(d['画像']),'o':'o/c/'+d['id']+'.png','_src':d} for d in cd]
 acs=[{'id':d['id'],'cat':CC[d['カテゴリ']][0],'catEn':CC[d['カテゴリ']][1],'kw':d['キーワード'],**dict(zip(('zh','en','ti'),gen2(d['キーワード'],CC[d['カテゴリ']][1],d['id']))),'t':'a/t/'+os.path.basename(d['サムネ']),'m':'a/m/'+d['id']+'.webp','i':'a/i/'+os.path.basename(d['画像']),'o':'o/a/'+d['id']+'.png','_src':d} for d in ad]
-# 双人 分类人工复核（看图）
+# Manual verification for couple poses (from visual inspection)
 FIX={'pair60_P031':'坐位','pair60_P053':'立位贴身','pair60_P055':'侧位','pair60_P058':'贴脸'}
 for k,v in FIX.items(): poses[k]['cat']=v
 ADULT_LINES={'双人互动','全身·性感'};ADULT_CATS={'挤胸·乳沟','性感·大胆'};ADULT_COS={'内衣','性感'}
@@ -40,11 +40,11 @@ for p in poses.values():
   for a in p['angles']: SRC[a['i']]=a.pop('_src')
 for c in cos: SRC[c['id']]=c.pop('_src')
 for c in acs: SRC['anime:'+c['id']]=c.pop('_src')
-# 安全内容排在前面（默认落地页无露骨内容）
+# Rank safe content first (default landing page shows no explicit items)
 PL=sorted(poses.values(),key=lambda p:p.get('a',0))
 PJ=J(PL);CJ=J(cos);AJ=J(acs)
 
-# ---------- 人像库（AI Portrait Gallery，CC0，@agi_aibusi）----------
+# ---------- Portrait Gallery (AI Portrait Gallery, CC0, @agi_aibusi) ----------
 rt=open(f'{R}/portrait/images.js').read();rd=json.loads(rt[rt.index('['):rt.rindex(']')+1])
 rk=open(f'{R}/portrait/ranking.js').read();RK=json.loads(rk[rk.index('{'):rk.rindex('}')+1])
 TRP={l.split('|')[0]:l.split('|')[1:] for l in open('tr_portrait.txt').read().strip().split('\n')}
@@ -102,8 +102,8 @@ def cr(d):
   if not os.path.exists(o): os.link(f"{R}/portrait/{d['full']}",o)
 for x in ['p/t','c/m','o/p','o/c','a/m','o/a','r/t','r/m','o/r']: os.makedirs(f'{AROOT if x.endswith("/t") or x.startswith("o/") else D}/{x}',exist_ok=True)
 if AHOST:
-  # 分离模式下缩略图/原图改写到 dist-assets，删掉 dist 里上一轮单站构建残留的旧文件，
-  # 否则主站仍含这批文件、文件数压不回 2 万上限（Codex review on PR #4）
+  # In split mode, rewrite thumbnails/original images to dist-assets and delete stale files from previous single-site builds in dist,
+  # otherwise main site file count cannot stay below 20k limit (Codex review on PR #4)
   for _d in ['p/t','c/t','a/t','r/t','o']:
     shutil.rmtree(f'{D}/{_d}',ignore_errors=True)
 if os.path.exists(f'{AROOT}/p/t'):
@@ -112,9 +112,24 @@ if os.path.exists(f'{AROOT}/p/t'):
 if AHOST:
   open(f'{AD}/_headers','w').write('/*\n  Cache-Control: public, max-age=31536000, immutable\n  Access-Control-Allow-Origin: *\n/o/*\n  Content-Disposition: attachment\n')
 with ProcessPoolExecutor() as ex: list(ex.map(cv,pd)); list(ex.map(cm,cd)); list(ex.map(ca,ad)); list(ex.map(cr,rd))
-# 深度姿势：只解析素材包里的文本，热链包不复制图片（见 depthpack.py）
+# Depth poses: parse metadata from pack only; hotlinked packs do not copy images (see depthpack.py)
 _dc=depthpack.catalog(); DJ=J(_dc['payload']); DEPTH_ORIGINS=_dc['origins']
 for src,rel in _dc['copies']:
   dest=f'{D}/{rel}'; os.makedirs(os.path.dirname(dest),exist_ok=True); shutil.copyfile(src,dest)
-exec(open('post.py').read())
+post.run(
+  D=D,
+  PJ=PJ,
+  CJ=CJ,
+  AJ=AJ,
+  RJ=RJ,
+  DJ=DJ,
+  DEPTH_ORIGINS=DEPTH_ORIGINS,
+  poses=poses,
+  PL=PL,
+  cos=cos,
+  acs=acs,
+  pors=pors,
+  R=R,
+  AHOST=AHOST,
+)
 print(len(poses),len(cos),len(acs),len(_dc['payload']['items']))

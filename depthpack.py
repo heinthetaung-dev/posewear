@@ -1,11 +1,11 @@
-# 深度姿势：按素材包生成前端数据。图片地址只在这里解析一次。
-# hotlink 包只写 URL，不下载、不复制图片。local 包才把自有文件复制进 dist。
+# Depth poses: generate frontend data by asset pack. Image URLs are resolved only once here.
+# hotlink packs only record URLs without downloading or copying images. local packs copy their files to dist.
 import json, os, re
 from urllib.parse import urlsplit
 
 ROOT = os.environ.get('POSEWEAR_DEPTH', 'depth/packs')
 IMG_EXT = {'.png', '.jpg', '.jpeg', '.webp', '.gif', '.avif'}
-# 与 build.py 的 LINE / CAT / ANG 一致，保证和姿势库用同一套译名。
+# Consistent with LINE / CAT / ANG in build.py to ensure the same translations as pose gallery.
 LINE = {'全身1人・セクシー系': ('全身·性感', 'full body, solo, sexy'), '全身1人・標準系': ('全身·标准', 'full body, solo'), '上半身1人': ('上半身', 'upper body, solo'), '2人絡み': ('双人互动', 'two people, couple')}
 CAT = {'寝そべり': '躺卧', 'セクシー・露骨寄り系': '性感·大胆', '立ち': '站姿', '座り': '坐姿', 'かわいい系': '可爱', '胸寄せ・谷間強調系': '挤胸·乳沟', '膝立ち・四つん這い': '跪立·趴姿', '特殊': '特殊', '正常位': '正面位', '膝立ち': '跪立', '横座り・女の子座り': '侧坐·鸭子坐', '後背位': '后入位', '背面座位': '背面坐位', 'しゃがみ': '蹲姿', '前かがみ': '前倾', '顔寄せ系': '贴脸', '騎乗位': '骑乘位', '立位': '立位', '立位密着': '立位贴身', 'のけぞり・反り': '后仰', 'ひねり': '扭身', '側位': '侧位', '座位': '坐位', '対面座位': '对面坐位', '座位密着': '坐位贴身', '密着': '贴身'}
 ANG = {'正面': ('正面', 'front view'), '上から': ('俯拍', 'high angle, from above'), '下から': ('仰拍', 'low angle, from below'), '横': ('侧面', 'side view'), '斜め': ('斜侧', 'three-quarter view')}
@@ -15,7 +15,7 @@ REFERRERS = {'no-referrer', 'origin', 'strict-origin', 'strict-origin-when-cross
 
 
 def abort(errors):
-    raise SystemExit('深度姿势素材校验失败（%d 项）：\n%s' % (len(errors), '\n'.join('- ' + e for e in errors)))
+    raise SystemExit('Depth pose validation failed (%d errors):\n%s' % (len(errors), '\n'.join('- ' + e for e in errors)))
 
 
 def _tr():
@@ -29,10 +29,10 @@ def _tr():
 
 def _rel(path, label):
     if not isinstance(path, str) or not path or path.startswith(('/', '\\')) or '://' in path or '\\' in path:
-        return None, '%s：路径必须是站内相对路径' % label
+        return None, '%s: path must be a site-relative path' % label
     norm = os.path.normpath(path)
     if norm.startswith('..') or os.path.isabs(norm):
-        return None, '%s：路径越界' % label
+        return None, '%s: path traversal outside boundary' % label
     return norm.replace('\\', '/'), None
 
 
@@ -51,31 +51,31 @@ def _inside(root, rel):
 
 
 def catalog(root=ROOT):
-    """返回 {payload, origins, copies}。copies 只有 local 包才有，热链包为空。"""
+    """Returns {payload, origins, copies}. copies is only present for local packs; hotlink packs are empty."""
     errors = []
     if not os.path.isdir(root):
-        abort(['找不到深度姿势包目录 %s' % root])
+        abort(['Cannot find depth pose pack directory %s' % root])
     tr = _tr()
     folders = sorted(d for d in os.listdir(root) if os.path.isdir(os.path.join(root, d)) and not d.startswith('.'))
     if not folders:
-        abort(['%s 下没有素材包' % root])
+        abort(['No asset packs found under %s' % root])
     items, origins, copies = [], [], []
     seen = set()
     for folder in folders:
         base = os.path.join(root, folder)
         mp = os.path.join(base, 'manifest.json')
         if not os.path.isfile(mp):
-            errors.append('%s：缺少 manifest.json' % folder)
+            errors.append('%s: missing manifest.json' % folder)
             continue
         try:
             manifest = json.load(open(mp, encoding='utf-8'))
         except Exception as e:
-            errors.append('%s：manifest 无法解析（%s）' % (folder, e))
+            errors.append('%s: failed to parse manifest (%s)' % (folder, e))
             continue
         pid = manifest.get('id') or folder
         source = manifest.get('source') or 'hotlink'
         if source not in ('hotlink', 'local'):
-            errors.append('%s：source 只能是 hotlink 或 local' % pid)
+            errors.append('%s: source must be hotlink or local' % pid)
             continue
         fields = dict(FIELDS)
         fields.update(manifest.get('fields') or {})
@@ -83,29 +83,29 @@ def catalog(root=ROOT):
         origin = _origin(manifest.get('base') or site)
         if source == 'hotlink':
             if not origin:
-                errors.append('%s：热链 base 必须是 https 地址' % pid)
+                errors.append('%s: hotlink base must be an https URL' % pid)
                 continue
             if origin not in origins:
                 origins.append(origin)
             for dirpath, _, files in os.walk(base):
                 for name in files:
                     if os.path.splitext(name)[1].lower() in IMG_EXT:
-                        errors.append('%s：热链包不能包含图片 %s' % (pid, os.path.relpath(os.path.join(dirpath, name), base)))
+                        errors.append('%s: hotlink pack cannot contain image files %s' % (pid, os.path.relpath(os.path.join(dirpath, name), base)))
         if not site:
-            errors.append('%s：缺少 site（原站地址）' % pid)
+            errors.append('%s: missing site (original site URL)' % pid)
         ref = manifest.get('referrerPolicy', 'no-referrer')
         if ref not in REFERRERS:
-            errors.append('%s：不认识的 referrerPolicy %s' % (pid, ref))
+            errors.append('%s: unrecognized referrerPolicy %s' % (pid, ref))
             ref = 'no-referrer'
         ip = os.path.join(base, manifest.get('items') or 'items.json')
         try:
             doc = json.load(open(ip, encoding='utf-8'))
         except Exception as e:
-            errors.append('%s：条目文件无法解析（%s）' % (pid, e))
+            errors.append('%s: failed to parse items file (%s)' % (pid, e))
             continue
         raw = doc.get('items') if isinstance(doc, dict) else doc
         if not isinstance(raw, list) or not raw:
-            errors.append('%s：条目为空' % pid)
+            errors.append('%s: items list is empty' % pid)
             continue
         lines = []
         if isinstance(doc, dict) and isinstance((doc.get('meta') or {}).get('lines'), list):
@@ -113,39 +113,39 @@ def catalog(root=ROOT):
         gated = set(manifest.get('gatedLines') or [])
         unknown = sorted(gated - set(lines) - set(LINE))
         if unknown:
-            errors.append('%s：gatedLines 不在数据里 %s' % (pid, '、'.join(unknown)))
+            errors.append('%s: gatedLines not found in data %s' % (pid, ', '.join(unknown)))
         groups = {}
         order = []
         for n, row in enumerate(raw, 1):
             if not isinstance(row, dict):
-                errors.append('%s：第 %d 条不是对象' % (pid, n))
+                errors.append('%s: item #%d is not an object' % (pid, n))
                 continue
             try:
                 iid, line, no, cat, name, ang = (row[fields[k]] for k in ('id', 'line', 'no', 'cat', 'name', 'angle'))
                 thumb, full = row[fields['thumb']], row[fields['full']]
             except KeyError as e:
-                errors.append('%s：第 %d 条缺少 %s' % (pid, n, e))
+                errors.append('%s: item #%d missing %s' % (pid, n, e))
                 continue
             gid = str(iid).rsplit('_', 1)[0]
             if not re.match(r'^[A-Za-z0-9][A-Za-z0-9_-]{0,80}$', gid):
-                errors.append('%s：编号不合法 %s' % (pid, iid))
+                errors.append('%s: invalid ID format %s' % (pid, iid))
                 continue
-            thumb, err = _rel(thumb, '%s %s 缩略图' % (pid, iid))
-            full, err2 = _rel(full, '%s %s 原图' % (pid, iid))
+            thumb, err = _rel(thumb, '%s %s thumbnail' % (pid, iid))
+            full, err2 = _rel(full, '%s %s full image' % (pid, iid))
             if err or err2:
                 errors.append(err or err2)
                 continue
             if line not in LINE:
-                errors.append('%s：未知系列 %s' % (pid, line))
+                errors.append('%s: unknown line/series %s' % (pid, line))
                 continue
             if cat not in CAT:
-                errors.append('%s：未知分类 %s' % (pid, cat))
+                errors.append('%s: unknown category %s' % (pid, cat))
                 continue
             if ang not in ANG:
-                errors.append('%s：未知角度 %s' % (pid, ang))
+                errors.append('%s: unknown angle %s' % (pid, ang))
                 continue
             if name not in tr:
-                errors.append('%s：没有中文译名 %s' % (pid, name))
+                errors.append('%s: missing Chinese translation %s' % (pid, name))
                 continue
             if source == 'hotlink':
                 turl, iurl = origin + '/' + thumb, origin + '/' + full
@@ -153,7 +153,7 @@ def catalog(root=ROOT):
                 for rel in (thumb, full):
                     src = _inside(base, rel)
                     if not src or not os.path.isfile(src):
-                        errors.append('%s：找不到本地图片 %s' % (pid, rel))
+                        errors.append('%s: local image not found %s' % (pid, rel))
                         continue
                     copies.append((src, 'd/%s/%s' % (pid, rel)))
                 turl, iurl = '/d/%s/%s' % (pid, thumb), '/d/%s/%s' % (pid, full)
@@ -161,7 +161,7 @@ def catalog(root=ROOT):
             if g is None:
                 zh, en = tr[name]
                 lz, le = LINE[line]
-                g = {'id': gid, 'no': str(no), 'line': lz, 'lineEn': le, 'lineJa': line, 'cat': CAT[cat], 'catJa': cat, 'ja': name, 'zh': zh, 'en': en, 'pack': pid, 'site': site, 'credit': manifest.get('credit') or '', 'unofficial': manifest.get('unofficial') or '非官方汉化', 'angles': []}
+                g = {'id': gid, 'no': str(no), 'line': lz, 'lineEn': le, 'lineJa': line, 'cat': CAT[cat], 'catJa': cat, 'ja': name, 'zh': zh, 'en': en, 'pack': pid, 'site': site, 'credit': manifest.get('credit') or '', 'unofficial': manifest.get('unofficial') or 'Unofficial Translation', 'angles': []}
                 if source == 'hotlink':
                     g['ext'] = 1
                     g['ref'] = ref or 'no-referrer'
@@ -171,15 +171,15 @@ def catalog(root=ROOT):
                 order.append(gid)
             else:
                 if g['ja'] != name or g['lineJa'] != line or g['catJa'] != cat or g['no'] != str(no):
-                    errors.append('%s：同一姿势的名称或分类不一致 %s' % (pid, gid))
+                    errors.append('%s: inconsistent name or category for pose %s' % (pid, gid))
             if any(a['ja'] == ang for a in g['angles']):
-                errors.append('%s：角度重复 %s %s' % (pid, gid, ang))
+                errors.append('%s: duplicate angle %s %s' % (pid, gid, ang))
                 continue
             g['angles'].append({'zh': ANG[ang][0], 'en': ANG[ang][1], 'ja': ang, 't': turl, 'i': iurl})
         got_lines = {g['lineJa'] for g in groups.values()}
         miss = sorted(x for x in gated if x not in got_lines)
         if miss:
-            errors.append('%s：gatedLines 没有对应条目 %s' % (pid, '、'.join(miss)))
+            errors.append('%s: gatedLines has no matching entries %s' % (pid, ', '.join(miss)))
         line_index = {x: i for i, x in enumerate(lines)}
 
         def sort_key(gid, line_index=line_index, groups=groups):
@@ -190,23 +190,23 @@ def catalog(root=ROOT):
         for gid in sorted(order, key=sort_key):
             g = groups[gid]
             if gid in seen:
-                errors.append('姿势编号在多个包里重复 %s' % gid)
+                errors.append('Pose ID duplicated across multiple packs %s' % gid)
                 continue
             seen.add(gid)
             g['angles'].sort(key=lambda a: ANG_ORDER.index(a['ja']) if a['ja'] in ANG_ORDER else 99)
             if not g['angles']:
-                errors.append('%s：没有角度' % gid)
+                errors.append('%s: no angles found' % gid)
                 continue
             items.append(g)
     if errors:
         abort(errors)
     payload = {'pack': _public_pack(folders, root), 'items': items}
-    # 单包时把该包的署名放到顶层，前端横幅直接用。多包时保留第一包，条目各自带 site。
+    # For a single pack, place its attribution at the root for direct banner usage. For multiple packs, retain the first pack while items carry their own site.
     return {'payload': payload, 'origins': origins, 'copies': copies}
 
 
 def _public_pack(folders, root):
-    """横幅用的署名。多包时列出全部，当前只有一个热链包。"""
+    """Attribution for banner usage. Lists all packs when multiple are present; currently only one hotlink pack."""
     packs = []
     for folder in folders:
         m = json.load(open(os.path.join(root, folder, 'manifest.json'), encoding='utf-8'))

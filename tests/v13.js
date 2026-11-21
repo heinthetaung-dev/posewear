@@ -5,7 +5,7 @@ async function setup(prov,vp,dark){const c=await b.newContext({viewport:vp||{wid
  const handler=async(route)=>{const req=route.request();const u=req.url();if(req.method()=='OPTIONS')return route.fulfill({status:204,headers:{'access-control-allow-origin':'*','access-control-allow-headers':'*','access-control-allow-methods':'*'}});
   hits.push(prov+' '+u+' '+(req.headers()['x-target-url']||''));bodies.push(req.postData()||'');const H={'content-type':'application/json','access-control-allow-origin':'*'};const img=P[(cnt++)%2];
   if(mode.startsWith('safe')){const MS={'safe-oai':[400,{error:{message:'Your request was rejected by the safety system. If you believe this is an error, contact us at help.openai.com and include the request ID req_abc123XYZ. safety_violations=[sexual].',type:'image_generation_user_error',code:'moderation_blocked'}}],'safe-gem':[200,{candidates:[{finishReason:'IMAGE_SAFETY',content:{parts:[{text:'I cannot generate this.'}]}}],responseId:'gemResp1'}],'safe-gem2':[200,{promptFeedback:{blockReason:'PROHIBITED_CONTENT'}}],'safe-sd':[400,{error:{code:'InputImageSensitiveContentDetected',message:'The request failed because the input image may contain sensitive information. Request id: 0217abc'}}]};const [s,bd]=MS[mode];return route.fulfill({status:s,headers:H,body:JSON.stringify(bd)})}
-  if(mode=='401')return route.fulfill({status:401,headers:H,body:JSON.stringify({error:{message:'Incorrect API key provided: sk-test-123'}})});
+  if(mode=='401')return route.fulfill({status:401,headers:H,body:JSON.stringify({error:{message:'Incorrect API key provided: mock-key-test-000'}})});
   if(mode=='429')return route.fulfill({status:429,headers:H,body:JSON.stringify({error:{message:'Rate limit reached'}})});
   if(mode=='500')return route.fulfill({status:500,headers:H,body:'{"error":{"message":"internal"}}'});
   if(mode=='hang'){await new Promise(r=>setTimeout(r,8000));return route.fulfill({status:500,headers:H,body:'{}'}).catch(()=>{})}
@@ -13,7 +13,7 @@ async function setup(prov,vp,dark){const c=await b.newContext({viewport:vp||{wid
   const body=/generateContent/.test(u+(req.headers()['x-target-url']||''))?{candidates:[{content:{parts:[{text:'ok'},{inlineData:{mimeType:'image/png',data:img}}]}}]}:{data:[{b64_json:img}]};
   return route.fulfill({status:200,headers:H,body:JSON.stringify(body)})};
  await p.route(/api\.openai\.com|generativelanguage\.googleapis\.com|ark\.cn-beijing\.volces\.com|\/api\/proxy/,handler);
- await p.addInitScript(([prov,dark])=>{if(!sessionStorage.x){sessionStorage.x=1;localStorage.setItem('wbCfg',JSON.stringify({prov,key:'sk-test-123',base:prov=='custom'?'https://relay.example.com':'',model:'',field:'image[]',proto:'json',proxy:false}));localStorage.setItem('introX','1');if(dark)localStorage.setItem('theme','dark')}window.__TMO=3000},[prov,dark]);
+ await p.addInitScript(([prov,dark])=>{if(!sessionStorage.x){sessionStorage.x=1;localStorage.setItem('wbCfg',JSON.stringify({prov,key:'mock-key-test-000',base:prov=='custom'?'https://relay.example.com':'',model:'',field:'image[]',proto:'json',proxy:false}));localStorage.setItem('introX','1');if(dark)localStorage.setItem('theme','dark')}window.__TMO=3000},[prov,dark]);
  await p.goto(U+'/#studio');await p.waitForFunction(()=>window.WB&&window.APP,null,{timeout:15000});
  await p.setInputFiles('#wbFile',FX+'person.png');
  await p.evaluate(async()=>{await APP.load('costume');const k=Object.keys(APP.ITEMS).find(k=>APP.ITEMS[k].type=='costume');await WB.pick(APP.ITEMS[k])});
@@ -40,7 +40,7 @@ for(const prov of ['openai','gemini','seedream','custom']){hits=[];mode='ok';con
    await p.click('#wbErr summary');await p.$eval('#wbErr',e=>e.scrollIntoView({block:'center'}));await p.screenshot({path:SS+'v14-safety.png'});R.push(['raw has rid',/req_abc123XYZ/.test(await p.$eval('#wbErr pre',e=>e.textContent)),'']);
    await p.click('[data-ef=prov]');await p.waitForTimeout(300);R.push(['prov opens cfg',await p.$eval('#cfg',e=>!e.hidden),'']);await p.evaluate(()=>{document.querySelector('#cfgX').click()});
    await p.click('[data-ef=cos]');await p.waitForTimeout(400);R.push(['cos picker',await p.evaluate(()=>!document.querySelector('#pk').hidden),'']);await p.keyboard.press('Escape');await p.waitForTimeout(300)}
-  for(const m of ['401','429','500']){mode=m;await go(p);s=await st(p);R.push([prov+' '+m,!!s.err&&!s.err.includes('sk-test-123'),s.err.slice(0,90)])}
+  for(const m of ['401','429','500']){mode=m;await go(p);s=await st(p);R.push([prov+' '+m,!!s.err&&!s.err.includes('mock-key-test-000'),s.err.slice(0,90)])}
   mode='hang';await go(p);s=await st(p);R.push(['timeout',/3 分钟/.test(s.err),s.err.slice(0,60)]);
   mode='hang';await p.click('#wbGo');await p.waitForTimeout(600);await p.click('#wbStop');await p.waitForTimeout(500);s=await st(p);R.push(['cancel',/已取消/.test(s.toast)&&await p.$eval('#wbBusy',e=>e.hidden),s.toast]);
   mode='500';await go(p);mode='ok';await p.click('#wbRetry');await p.waitForFunction(()=>document.querySelector('#wbBusy').hidden,null,{timeout:15000});s=await st(p);R.push(['retry ok',!s.err,JSON.stringify(s)]);

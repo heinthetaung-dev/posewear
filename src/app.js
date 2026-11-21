@@ -91,10 +91,10 @@ $('#sort').onchange=e=>{st.sort=e.target.value;viewT(apply)};
 let qt;$('#q').oninput=e=>{$('#qx').hidden=!e.target.value;clearTimeout(qt);qt=setTimeout(()=>{st.q=e.target.value;apply()},160)};$('#qx').onclick=()=>{$('#q').value='';st.q='';$('#qx').hidden=true;apply();$('#q').focus()};
 function randPick(){if(!st.list.length)return toast('当前没有可选的内容');const i=Math.random()*st.list.length|0;lbOpen(i);0}
 $('#rand').onclick=randPick;
-// 语言
+// Language
 function setLang(l,quiet){st.lang=l;SV('lang',l);document.documentElement.dataset.lang=l;$$('button[data-lang]').forEach(b=>b.classList.toggle('on',b.dataset.lang==l));grid.querySelectorAll('.card').forEach(c=>{const it=ITEMS[c.dataset.k];if(it)c.querySelector('.sub').textContent=subtitle(it)});if(!quiet)toast(l=='zh'?'描述语言：中文':'描述语言：英文提示词')}
 $$('button[data-lang]').forEach(b=>b.onclick=()=>setLang(b.dataset.lang));
-// 标签页
+// Tabs
 function moveInd(){const b=$('.tabs button.on'),ind=$('.ind');if(!b)return;ind.style.width=b.offsetWidth+'px';ind.style.transform=`translateX(${b.offsetLeft}px)`}
 async function setTab(t,openId){$('#porNote').hidden=t!='portrait';$('#depthNote').hidden=t!='depth';document.body.classList.toggle('depth',t=='depth');if(t=='studio'){st.tab=t;$$('.tabs button').forEach(b=>{b.classList.toggle('on',b.dataset.tab==t);b.setAttribute('aria-selected',b.dataset.tab==t)});moveInd();document.title='试穿 · 衣姿 PoseWear';history.replaceState(null,'','#studio');document.body.classList.add('studio');$('#studio').hidden=false;$('#tray').hidden=true;scrollTo({top:0});window.WB&&WB.show();return}
  if(document.body.classList.contains('studio')){document.body.classList.remove('studio');$('#studio').hidden=true;tray()}
@@ -111,11 +111,11 @@ async function setTab(t,openId){$('#porNote').hidden=t!='portrait';$('#depthNote
 $('.tabs').onclick=e=>{const b=e.target.closest('button');if(!b)return;const t=b.dataset.tab;if(t==st.tab&&!document.body.classList.contains('studio')){scrollTo({top:0,behavior:RM?'auto':'smooth'});return}if(location.hash!='#'+t)history.pushState(null,'','#'+t);setTab(t)};addEventListener('resize',()=>{moveInd();hdr()});
 function theme(){const go=()=>{const t=document.documentElement.dataset.theme=document.documentElement.dataset.theme=='dark'?'light':'dark';SV('theme',t);localStorage.theme=t;$('meta[name=theme-color]').content=t=='dark'?'#111111':'#ffffff'};if(document.startViewTransition&&!RM){const v=document.startViewTransition(go);v.ready.catch(()=>{});v.finished.catch(()=>{})}else go()}
 $('#theme').onclick=theme;$('#help').onclick=()=>$('#helpBox').hidden=false;$('#helpBox').onclick=e=>{if(e.target.id=='helpBox'||e.target.dataset.close!=null)$('#helpBox').hidden=true};
-// 滚动
+// Scroll
 const hdr=()=>document.documentElement.style.setProperty('--hdr',$('#top').offsetHeight+'px');$('#top').addEventListener('transitionend',hdr);
 let sc=false;addEventListener('scroll',()=>{const s=scrollY>24;if(s!=sc){sc=s;document.body.classList.toggle('scrolled',s);setTimeout(hdr,420)}$('#toTop').classList.toggle('on',scrollY>900)},{passive:true});
 $('#toTop').onclick=()=>scrollTo({top:0,behavior:RM?'auto':'smooth'});
-// 收藏导入导出 / 最近
+// Favorites import/export / Recent
 $('#exp').onclick=()=>{if(!st.fav.size)return toast('还没有收藏可导出');const items=[...st.fav].map(k=>ITEMS[k]).filter(Boolean).map(it=>({类型:TL(it),编号:it.id,名称:title(it),中文:prompt(it,'zh'),英文:prompt(it,'en'),key:it.k}));
  const b=new Blob([JSON.stringify({app:'衣姿 PoseWear',导出时间:new Date().toLocaleString('zh-CN'),收藏:items},null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='衣姿-收藏-'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);toast('已导出 '+items.length+' 条收藏')};
 $('#imp').onclick=()=>$('#impF').click();$('#impF').onchange=async e=>{try{const j=JSON.parse(await e.target.files[0].text());const ks=(j.收藏||[]).map(x=>x.key).filter(k=>/^[pcrad]:/.test(k));await needKeys(ks);let n=0;ks.forEach(k=>{if(ITEMS[k]&&!st.fav.has(k)){st.fav.add(k);n++}});SV('fav',[...st.fav]);counts();setTab('fav');toast('已导入 '+n+' 条收藏')}catch(err){toast('导入失败：文件格式不正确')}e.target.value=''};
@@ -127,7 +127,7 @@ $('#annX').onclick=()=>{localStorage.annAnime=1;document.documentElement.classLi
 addEventListener('offline',()=>toast('网络已断开，看过的图片还能继续浏览'));addEventListener('online',()=>toast('网络已恢复'));
 function addRec(k){st.rec=[k,...st.rec.filter(x=>x!=k)].slice(0,100);st.recT[k]=Date.now();const r={};st.rec.forEach(x=>st.recT[x]&&(r[x]=st.recT[x]));st.recT=r;SV('rec',st.rec);SV('recT',r);counts()}
 addEventListener('storage',e=>{if(!['fav','rec','recT','adult','sel'].includes(e.key))return;st.fav=new Set(LS('fav')||[]);st.rec=LS('rec')||[];st.recT=LS('recT')||{};st.sel=LS('sel')||[];if(e.key=='adult'&&st.adult!=(LS('adult')===true))ageSet(LS('adult')===true);counts();needKeys([...st.fav,...st.rec,...st.sel]).then(()=>{tray();if((st.tab=='fav'||st.tab=='recent')&&$('#lb').hidden)apply()}).catch(()=>{})});
-// 大图
+// Modal view
 let li=0,srcCard=null;const pre=new Map();function preload(src){if(pre.has(src))return pre.get(src);const p=new Promise(r=>{const i=new Image();if(/^https?:/i.test(src))i.referrerPolicy='no-referrer';i.onload=()=>r(src);i.onerror=()=>r(null);i.src=src});pre.set(src,p);if(pre.size>80)pre.delete(pre.keys().next().value);return p}
 function rectAnim(el,from,rev){const to=el.getBoundingClientRect();if(!from||!to.width)return el.animate([{opacity:0,transform:'scale(.94)'},{opacity:1,transform:'none'}],{duration:rev?220:380,easing:'cubic-bezier(.16,1,.3,1)',direction:rev?'reverse':'normal',fill:'both'});
  const dx=from.left+from.width/2-(to.left+to.width/2),dy=from.top+from.height/2-(to.top+to.height/2),s=Math.max(from.width/to.width,.08);
@@ -167,13 +167,13 @@ addEventListener('keydown',e=>{if(e.ctrlKey||e.metaKey||e.altKey)return;const ae
  else if(k=='f')toggleFav(it.k);else if(k=='a')toggleSel(it.k);else if(k=='c')copy(prompt(it,'zh'),'中文描述');else if(k=='s')share();
  else if(e.key=='Tab'){const f=[...$('#lb').querySelectorAll('button,a[href]')].filter(x=>x.offsetParent);if(!f.length)return;const a=f[0],z=f[f.length-1];if(e.shiftKey&&ae==a){e.preventDefault();z.focus()}else if(!e.shiftKey&&ae==z){e.preventDefault();a.focus()}}});
 let tx,ty;$('.lb-img').addEventListener('touchstart',e=>{tx=e.touches[0].clientX;ty=e.touches[0].clientY},{passive:true});$('.lb-img').addEventListener('touchend',e=>{const d=e.changedTouches[0].clientX-tx,dy=e.changedTouches[0].clientY-ty;if(Math.abs(d)>50&&Math.abs(d)>Math.abs(dy))step(d<0?1:-1);else if(dy>90)lbClose()});
-// 数字滚动
+// Number counting animation
 function countUp(){$$('.stats b').forEach(b=>{const n=+(st.adult&&b.dataset.na||b.dataset.n);if(RM||b.textContent.trim()!='0'){b.textContent=n.toLocaleString('zh-CN');return}const t0=performance.now();const f=t=>{const p=Math.min((t-t0)/1400,1);b.textContent=Math.round(n*(1-Math.pow(1-p,4))).toLocaleString('zh-CN');p<1&&requestAnimationFrame(f)};requestAnimationFrame(f)})}
-// 路由
+// Routing
 function openById(id){let i=st.list.findIndex(x=>x.id==id);if(i>=0)return lbOpen(i);const it=(DATA[st.tab]||[]).find(x=>x.id==id);if(!it)return toast('未找到该条目');
  if(!ok(it))return ageAsk(()=>openById(id));st.f={};st.q='';$('#q').value='';drawFilters();apply();i=st.list.findIndex(x=>x.id==id);if(i>=0)lbOpen(i)}
 function route(){const [t,id]=location.hash.slice(1).split('/');const tab=TABS.includes(t)?t:'pose';if(!id&&tab==st.tab&&st.list.length)return;if(tab!=st.tab||!st.list.length||!id)setTab(tab,id&&decodeURIComponent(id));else openById(decodeURIComponent(id))}
-// 成人内容开关
+// Adult content toggle
 function ageSet(on,anim){st.adult=on;SV('adult',on);if(on)SV('ageOk',true);document.body.classList.toggle('adult',on);$('#adultSw').setAttribute('aria-checked',on);$('#adultSw').title=on?'成人向内容已显示，点击关闭':'成人向内容已隐藏，点击打开';counts();countUp();if(st.tab&&st.tab!='studio'&&st.tab!=''){const f=()=>{drawFilters();apply()};anim?viewT(f):f()}window.WB&&WB.show&&st.tab=='studio'&&WB.show()}
 let ageCb=null;function ageAsk(cb){ageCb=cb||null;const seen=LS('ageOk');$('#ageT').textContent=cb?'这是成人向内容':'显示成人向内容？';$('#ageP').textContent=(cb?'要查看它，需要打开顶部的「18+」开关。':'包括双人互动、性感类姿势、深度姿势里的双人图，以及内衣、性感类服装。')+(seen?'打开后随时可以再关上。':'仅适合已满 18 岁的用户。只需确认一次，之后用顶部开关随时打开或关闭。');$('#ageY').textContent=seen?'打开 18+ 开关':'我已满 18 岁，打开';$('#ageBox').hidden=false;setTimeout(()=>$('#ageY').focus(),30)}
 $('#adultSw').onclick=()=>{if(st.adult){ageSet(false,1);toast('已关闭成人向内容')}else if(LS('ageOk')){ageSet(true,1);toast('已显示成人向内容')}else ageAsk()};

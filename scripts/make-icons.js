@@ -1,9 +1,9 @@
 const {chromium}=require('playwright');const fs=require('fs');
-// A: 衣架即肩线 + 头 = 一个"穿着衣架"的人
+// A: Hanger as shoulder line + head = a person "wearing a hanger"
 const A=c=>`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="6.6" r="4" fill="${c}"/><path d="M16 13.4 3.4 25.6h25.2z" fill="none" stroke="${c}" stroke-width="3.4" stroke-linejoin="round"/></svg>`;
-// B: 举臂人形 Y + 衣领
+// B: Raised-arm figure Y + collar
 const B=c=>`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="6" r="3.2" fill="${c}"/><path d="M6 10l10 7 10-7M16 17v11" fill="none" stroke="${c}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-// C: 衣架钩 + 字母 P 组合
+// C: Hanger hook + letter P combo
 const C=c=>`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><path d="M13 9a3 3 0 1 1 3 3v2M16 14 4 24h24z" fill="none" stroke="${c}" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 const F="-apple-system,'PingFang SC','Noto Sans CJK SC',sans-serif";
 (async()=>{const b=await chromium.launch();const p=await b.newPage();

@@ -65,21 +65,21 @@ def gen(kw,cat):
   en=', '.join(dict.fromkeys([cat+' outfit']+tags))
   return zh,en
 if __name__=='__main__':
-  import json,random
-  D=json.load(open(__import__('os').environ.get('POSEWEAR_RAW','assets-raw')+'/costume/data.json'))['D'];random.seed(3)
+  import os,json,random
+  D=json.load(open(os.environ.get('POSEWEAR_RAW','assets-raw')+'/costume/data.json'))['D'];random.seed(3)
   for d in random.sample(D,12): print(d['キーワード'],'\n  ',*gen(d['キーワード'],'x'))
 
-# ===== v10: 去重词、变化句式、生成标题 =====
+# ===== v10: Deduplicate modifiers, diversify syntax, generate title =====
 import zlib
 def _clean(mods,w,zh):
-  # 去掉与名词重复的修饰（denim jeans → 牛仔裤）
+  # Strip duplicate modifiers that match the noun (denim jeans -> jeans)
   mods=[m for m in mods if not (m in MOD and MOD[m] in zh)]
   return mods
 def gen2(kw,cat,cid):
   items=parse(kw);S={};ORD=[]
   for mods,w,zh,slot in items:
     mods=_clean(mods,w,zh);S.setdefault(slot,[]).append(zhp(mods,w,zh))
-  # 半身裙 + 短裤 同时出现 → 裙裤
+  # Skirt + shorts appear together -> skort
   b=S.get('bottom',[])
   sk=[x for x in b if x.endswith('裙')];sh=[x for x in b if x.endswith('短裤')]
   if sk and sh and len(b)==2: S['bottom']=[sk[0][:-1]+'裙裤']
@@ -96,7 +96,7 @@ def gen2(kw,cat,cid):
   if 'acc' in S:
     a=J('acc');P.append(pick([f'再加{a}',f'配{a}',f'{a}作点缀',f'点缀{a}'],13))
   zh=('，'.join(P) or kw)+'。'
-  # 标题：主件
+  # Title: main garment pieces
   def short(x):return x
   if 'one' in S: main=[S['one'][0]]+(S.get('outer',[])[:1])
   else: main=(S.get('outer',[])[:1] or S.get('top',[])[:1])+S.get('bottom',[])[:1]
